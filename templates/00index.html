@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Hardlink Manager Final</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+/* --- 全局变量 --- */
+:root {
+  --bg-body: #f3f4f6;
+  --bg-card: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #dc2626;
+  --success: #059669;
+  --header-height: 60px;
+}
+
+html[data-theme="dark"] {
+  --bg-body: #0f172a;
+  --bg-card: #1e293b;
+  --text-main: #f3f4f6;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --primary: #60a5fa;
+  --primary-hover: #93c5fd;
+  --danger: #f87171;
+  --success: #34d399;
+}
+
+* { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+body { 
+  margin: 0; 
+  font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+  font-size: 15px;
+  background: var(--bg-body); 
+  color: var(--text-main); 
+  height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+}
+
+/* --- 1. 顶部 Header --- */
+.header {
+  height: var(--header-height); background: var(--bg-card); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; justify-content: space-between; flex-shrink: 0; z-index: 10;
+}
+.brand { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.header-tools { display: flex; gap: 10px; align-items: center; }
+
+/* --- 2. 主体容器 (包含 PanesWrapper 和 ActionBar) --- */
+.main-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column; /* 电脑端垂直排列：上面是分栏，下面是操作条 */
+  overflow: hidden;
+  position: relative;
+}
+
+/* --- 3. 分栏容器 (Source + Target) --- */
+.panes-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: row; /* 电脑端左右排布 */
+  overflow: hidden;
+  background: var(--border);
+  gap: 1px;
+}
+
+/* 单个面板 */
+.pane {
+  flex: 1;
+  background: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  height: 100%;
+}
+
+.pane-header {
+  padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+}
+.pane-title-row { display:flex; justify-content:space-between; align-items:center; }
+.pane-title { font-weight: 700; font-size: 16px; display:flex; align-items:center; gap:6px;}
+
+.pane-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pane-tools input[type=text] { flex: 1; min-width: 150px; }
+
+.pane-body { flex: 1; overflow-y: auto; background: var(--bg-card); -webkit-overflow-scrolling: touch; }
+
+.pane-footer {
+  padding: 10px 16px; border-top:1px solid var(--border); background:var(--bg-body);
+  display:flex; justify-content:space-between; align-items:center; flex-shrink: 0; font-size: 13px;
+}
+
+/* --- 4. 底部操作栏 (Action Bar) --- */
+.action-bar {
+  background: var(--bg-card); 
+  border-top: 1px solid var(--border); 
+  padding: 16px 20px;
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 20px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
+  z-index: 20; 
+  flex-shrink: 0;
+  height: auto; /* 电脑端高度自适应 */
+}
+.action-group { display: flex; align-items: center; gap: 12px; }
+
+/* 手机端独有的标题 (电脑端隐藏) */
+.mobile-action-title { display: none; font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+
+/* --- 5. 手机底部导航 (Mobile Nav) --- */
+.mobile-nav {
+  display: none; /* 电脑端隐藏 */
+  height: 60px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  gap: 4px;
+}
+.nav-item.active { color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+.nav-icon { font-size: 20px; }
+
+/* --- 通用组件 --- */
+button {
+  padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; 
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent;
+  transition: background 0.2s; white-space: nowrap;
+}
+button.primary { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+button.primary:active { background: var(--primary-hover); transform: translateY(1px); }
+button.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+button.ghost:active { background: var(--border); color: var(--text-main); }
+button.danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+
+input[type=text], select {
+  background: var(--bg-body); border: 1px solid var(--border); color: var(--text-main);
+  padding: 8px 10px; border-radius: 8px; font-size: 14px; height: 38px;
+}
+input[type=text]:focus, select:focus { border-color: var(--primary); }
+
+/* --- 表格 --- */
+table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
+th { 
+  position: sticky; top: 0; background: var(--bg-body); color: var(--text-muted); 
+  font-weight: 600; text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); 
+  z-index: 2; white-space: nowrap; 
+}
+td { 
+  padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-main); vertical-align: middle; 
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+}
+tr:hover td { background: rgba(0,0,0,0.02); }
+
+.col-check { width: 40px; text-align: center; padding: 0 !important; }
+.col-check input { width: 18px; height: 18px; margin: 0; vertical-align: middle; cursor: pointer; }
+.col-size { width: 90px; }
+.col-status { width: 70px; text-align: center; }
+
+.item-name { 
+  font-weight: 500; cursor: pointer; color: var(--text-main); text-decoration: none; 
+  display: flex; align-items: center; gap: 8px; 
+}
+.is-dir { color: var(--primary); font-weight: 600; }
+.badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+
+.crumbs { display: flex; align-items: center; gap: 4px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; font-size: 13px; }
+.crumbs a { color: var(--text-muted); text-decoration: none; padding: 4px; border-radius: 4px; }
+.crumbs a:hover { color: var(--primary); background: rgba(0,0,0,0.05); }
+.crumbs span.sep { color: var(--border); font-size: 12px; margin: 0 2px; }
+
+.shortcuts-area { padding: 10px 16px; background: var(--bg-body); border-bottom: 1px solid var(--border); display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; }
+.shortcut-tag {
+  font-size: 13px; background: var(--bg-card); border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+
+/* --- 弹窗 --- */
+#logsModal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px);
+}
+#logsModal.active { display: flex; }
+.modal-content {
+  background: var(--bg-card); width: 90%; max-width: 1000px; height: 85vh; border-radius: 12px;
+  display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+.delete-toolbar {
+  background: #fff1f2; border-top: 1px solid #fecaca; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.delete-options { display: flex; gap: 8px; align-items: center; }
+
+/* =========================================
+   📱 手机端专属布局逻辑 (核心修改)
+========================================= */
+@media (max-width: 850px) {
+  /* 1. 主容器样式调整 */
+  .panes-wrapper {
+    display: block; /* 取消 Flex Row，改为堆叠 */
+    background: var(--bg-body);
+  }
+  
+  /* 2. 面板显隐控制 */
+  .pane {
+    display: none; /* 默认隐藏所有面板 */
+    height: 100% !important; 
+    width: 100%;
+  }
+  /* 通过 JS 添加 .mobile-active 类来显示 */
+  .pane.mobile-active { display: flex; }
+
+  /* 3. Action Bar 变身逻辑 */
+  .action-bar {
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    height: 100%; /* 全屏 */
+    border-top: none;
+    padding: 20px;
+    gap: 16px;
+  }
+  .action-bar.mobile-active { display: flex; }
+  
+  .mobile-action-title { display: block; } /* 显示标题 */
+  
+  /* 4. Action Bar 内部适配 */
+  .action-group {
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--bg-card);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    gap: 12px;
+  }
+  .action-bar input, .action-bar select, .action-bar button {
+    width: 100%;
+    height: 48px; 
+    font-size: 16px;
+  }
+  .action-bar label {
+    font-weight: 700; color: var(--text-muted); font-size: 14px; display: block; margin-bottom: 4px;
+  }
+
+  /* 5. 显示底部导航 */
+  .mobile-nav { display: flex; }
+
+  /* 6. 其他微调 */
+  .header { padding: 0 12px; }
+  .header-tools button span { display: none; } /* 隐藏顶部按钮文字 */
+  .col-hide-mobile { display: none; }
+  .col-check { width: 40px; }
+  .col-status { width: 50px; font-size: 12px; }
+  #logsModal { align-items: flex-end; }
+  .modal-content { width: 100%; height: 92vh; border-radius: 16px 16px 0 0; }
+  .delete-toolbar { flex-direction: column; align-items: stretch; }
+  .delete-options { flex-direction: column; align-items: stretch; }
+}
+
+
+#manageModal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 101; backdrop-filter: blur(2px);
+}
+#manageModal.active { display: flex; }
+
+.mg-path {
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:10px 12px; border:1px solid var(--border); border-radius:10px; background: var(--bg-card);
+}
+.mg-path .p { word-break: break-all; }
+
+.mg-src-cell{
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-all;
+  line-height: 1.35;
+}
+.mg-path .p { white-space: normal; }
+
+/* 管理弹窗：表格可滚动，详情固定在底部 */
+#manageModal .pane-content{
+  display:flex;
+  flex-direction:column;
+  max-height: 82vh;
+}
+#manageModal .mg-table-wrap{
+  overflow:auto;
+  flex: 1 1 auto;
+  min-height: 180px;
+}
+#manageModal #mgDetailPane{
+  position: sticky;
+  bottom: 0;
+  flex: 0 0 auto;
+  background: rgba(17, 24, 39, 0.98);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
+}
+/* 目标数量列窄一些 */
+#manageModal th.mg-col-count, #manageModal td.mg-col-count{
+  width: 70px;
+  max-width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+#manageModal td.mg-src-cell{
+  white-space: normal !important;
+  word-break: break-all;
+  line-height: 1.25;
+}
+/* 目标列表行 */
+.mg-tgt-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:6px 0;
+  border-top: 1px dashed rgba(255,255,255,0.08);
+}
+.mg-tgt-path{
+  flex:1 1 auto;
+  word-break: break-all;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="brand"><span>⚡</span> Hardlink Pro</div>
+  <div class="header-tools">
+    <select id="presetSel" style="max-width:140px"></select>
+    <button class="ghost" onclick="applyPreset()">📥<span> 载入</span></button>
+    <button class="ghost" onclick="toggleTheme()">🌓<span> 主题</span></button>
+    <button class="ghost" onclick="showManage()">🧰<span> 管理</span></button>
+        <button class="ghost" onclick="showLogs()">📜<span> 记录</span></button>
+  </div>
+</div>
+
+<div class="main-layout">
+  
+  <div class="panes-wrapper" id="panesWrapper">
+    
+    <div id="pane-src" class="pane mobile-active">
+      <div class="pane-header">
+        <div class="pane-title-row">
+          <div class="pane-title">📦 源文件 (Source)</div>
+          <span id="srcCountBadge" class="badge" style="background:var(--border);color:var(--text-muted)">0</span>
+        </div>
+        <div class="pane-tools">
+          <input id="srcPath" type="text" placeholder="输入路径..." onchange="goSrc(1)">
+          <select id="srcOnly" onchange="goSrc(1)">
+            <option value="all">显示全部</option>
+            <option value="dirs">仅文件夹</option>
+            <option value="video">仅视频</option>
+          </select>
+          <select id="srcLinkFilter" onchange="goSrc(1)">
+            <option value="all">状态</option>
+            <option value="unlinked">未链</option>
+            <option value="linked">已链</option>
+          </select>
+          <button class="ghost" onclick="goSrc(1)">🔄 刷新</button>
+        </div>
+        <div class="crumbs" id="srcCrumbs"></div>
+      </div>
+      <div class="pane-body">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="srcAll" onchange="toggleAllSrc(this.checked)"></th>
+              <th>文件名</th>
+              <th class="col-size col-hide-mobile">大小</th>
+              <th class="col-status" align="center">状态</th>
+            </tr>
+          </thead>
+          <tbody id="srcBody"></tbody>
+        </table>
+      </div>
+      <div class="pane-footer">
+        <div id="srcPageInfo">Wait...</div>
+        <div style="display:flex; gap:8px">
+          <button class="ghost" onclick="srcPrev()">上一页</button>
+          <button class="ghost" onclick="srcNext()">下一页</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pane-dst" class="pane">
+      <div class="pane-header">
+        <div class="pane-title-row">
+          <div class="pane-title">🎯 目标路径 (Target)</div>
+          <button class="ghost" style="padding:4px 8px; font-size:12px" onclick="syncBaseToDst()">设为快捷根</button>
+        </div>
+        <div class="pane-tools">
+          <input id="dstPath" type="text" placeholder="输入路径..." onchange="goDst()">
+          <button class="ghost" onclick="goDst()">🔄 刷新</button>
+        </div>
+        <div class="crumbs" id="dstCrumbs"></div>
+      </div>
+      <div class="shortcuts-area" id="shortcutBox"></div>
+      <div class="pane-body">
+        <table>
+          <thead>
+            <tr>
+              <th>目录名称 (点击进入)</th>
+              <th class="col-size col-hide-mobile">时间</th>
+            </tr>
+          </thead>
+          <tbody id="dstBody"></tbody>
+        </table>
+      </div>
+      <div class="pane-footer" style="display:block; padding-top:10px">
+          <div style="display:flex; gap:8px; width:100%">
+              <input id="shortcutLabel" type="text" placeholder="快捷名" style="width:80px; flex-shrink:0">
+              <input id="shortcutPath" type="text" placeholder="相对路径" style="flex:1">
+              <button class="ghost" onclick="addShortcut()">➕ 添加</button>
+          </div>
+      </div>
+    </div>
+
+  </div><div id="actionBar" class="action-bar">
+    <div class="mobile-action-title">🚀 执行操作</div>
+    
+    <div class="action-group">
+      <label class="mobile-show">冲突处理策略</label>
+      <select id="conflictPolicy">
+        <option value="skip">⚠️ 冲突：跳过 (Skip)</option>
+        <option value="overwrite">⚠️ 冲突：覆盖 (Overwrite)</option>
+        <option value="rename">⚠️ 冲突：自动改名</option>
+      </select>
+    </div>
+
+    <div class="action-group">
+      <label class="mobile-show">备注信息</label>
+      <input id="note" type="text" placeholder="备注信息（可选）">
+    </div>
+    
+    <div class="action-group">
+      <button class="ghost" onclick="doPrecheck()">🔍 预检查</button>
+      <button class="primary" onclick="doLink()" style="min-width:140px">🚀 开始硬链接</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="mobile-nav">
+  <div class="nav-item active" onclick="switchTab('src')">
+    <span class="nav-icon">📦</span>
+    <span>源文件</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('dst')">
+    <span class="nav-icon">🎯</span>
+    <span>目标</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('act')">
+    <span class="nav-icon">🚀</span>
+    <span>执行</span>
+  </div>
+</div>
+
+<div id="logsModal">
+  <div class="modal-content">
+    <div class="modal-header" style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <strong>📜 记录管理与删除</strong>
+      <button class="ghost" onclick="closeLogs()">关闭 ✕</button>
+    </div>
+    <div style="padding:12px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center; background: var(--bg-body);">
+        <select id="recStatus" onchange="loadRecords(0)" style="flex:1"><option value="">所有状态</option><option value="OK">成功 (OK)</option><option value="FAIL">失败 (FAIL)</option></select>
+        <label style="font-size:13px;display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="recIncludeDeleted" checked onchange="loadRecords(0)">含已删</label>
+        <button class="ghost" onclick="loadRecords(0)">刷新</button>
+    </div>
+    <div class="pane-body">
+      <table>
+        <thead style="background:var(--bg-body)">
+            <tr>
+                <th class="col-check"><input type="checkbox" onchange="toggleAllRec(this.checked)"></th>
+                <th class="col-hide-mobile" width="100">操作</th>
+                <th>源文件 / 信息</th>
+                <th class="col-hide-mobile">目标</th>
+                <th class="col-status">状态</th>
+            </tr>
+        </thead>
+        <tbody id="recBody"></tbody>
+      </table>
+    </div>
+    <div class="pane-footer">
+        <span id="recPageInfo"></span>
+        <div style="display:flex; gap:8px">
+            <button class="ghost" onclick="recPrev()">◀</button>
+            <button class="ghost" onclick="recNext()">▶</button>
+        </div>
+    </div>
+    <div class="delete-toolbar">
+        <div style="font-weight:700; color:var(--danger); font-size:14px">🗑️ 删除操作:</div>
+        <div class="delete-options" style="flex:1">
+            <select id="delMode" style="flex:1; border-color:#fecaca">
+                <option value="target_recursive">仅删目标 (文件/递归目录)</option>
+                <option value="target">仅删目标 (非空目录报错)</option>
+                <option value="both">高风险: 同时删除源+目标</option>
+            </select>
+            <label style="font-size:13px; color:var(--danger); font-weight:600; white-space:nowrap">
+                <input type="checkbox" id="delConfirm"> 确认执行
+            </label>
+            <button class="danger" onclick="doDelete()">执行删除</button>
+        </div>
+    </div>
+  </div>
+</div>
+
+<input type="hidden" id="shortcutBase">
+<input type="hidden" id="srcSort" value="mtime">
+<input type="hidden" id="srcOrder" value="desc">
+<input type="hidden" id="srcPageSize" value="100">
+<input type="hidden" id="recPageSize" value="50">
+<input type="hidden" id="srcQ" value="">
+<input type="hidden" id="srcHidden" value="0">
+<input type="hidden" id="recQ" value="">
+<input type="hidden" id="recOp" value="">
+
+<script>
+const $ = id => document.getElementById(id);
+const fmtTime = t => new Date(t*1000).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+const fmtSize = n => {
+    if(!n) return "-"; const u=["B","KB","MB","GB","TB"]; let i=0,x=n; 
+    while(x>=1024&&i<u.length-1){x/=1024;i++;} return x.toFixed(1)+" "+u[i]; 
+};
+const normalizePath = p => { if(!p) return ""; let s=String(p).trim().replace(/\/+$/,""); return s || "/"; };
+
+let presets=[], targetShortcuts=[], currentPresetKey="default";
+let srcState={page:1,total:0,pageSize:100};
+let recState={offset:0,total:0,limit:50};
+let pendingJobIds = new Set();
+
+function initTheme() {
+    const v = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", v);
+}
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+}
+
+// --- 📱 核心：手机端 Tab 切换逻辑 ---
+function switchTab(tab) {
+  // 1. 更新底部导航高亮
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-item[onclick="switchTab('${tab}')"]`).classList.add('active');
+  
+  // 2. 获取关键 DOM 元素
+  const wrapper = $('panesWrapper');
+  const src = $('pane-src');
+  const dst = $('pane-dst');
+  const bar = $('actionBar');
+  
+  // 3. 状态切换
+  if (tab === 'src') {
+    wrapper.style.display = 'block'; // 显示分栏容器
+    src.classList.add('mobile-active'); // 显示源
+    dst.classList.remove('mobile-active');
+    bar.classList.remove('mobile-active');
+  } else if (tab === 'dst') {
+    wrapper.style.display = 'block';
+    src.classList.remove('mobile-active');
+    dst.classList.add('mobile-active'); // 显示目标
+    bar.classList.remove('mobile-active');
+  } else if (tab === 'act') {
+    wrapper.style.display = 'none'; // 隐藏分栏容器
+    bar.classList.add('mobile-active'); // 全屏显示操作栏
+  }
+}
+
+function renderCrumbs(elId, path, cb) {
+    const el = $(elId); el.innerHTML = "";
+    const parts = (path||"").split("/").filter(Boolean);
+    let cur = "/";
+    const root = document.createElement('a'); root.textContent = "ROOT"; root.href="javascript:void(0)"; root.onclick=()=>cb("/"); el.appendChild(root);
+    parts.forEach(p => {
+        const sep = document.createElement('span'); sep.className="sep"; sep.textContent="/"; el.appendChild(sep);
+        cur = (cur==="/"?"":cur) + "/" + p; const target = cur;
+        const a = document.createElement('a'); a.textContent = p; a.href="javascript:void(0)"; a.onclick=()=>cb(target); el.appendChild(a);
+    });
+    el.scrollLeft = el.scrollWidth;
+}
+
+// --- 源逻辑 ---
+async function goSrc(page) {
+    if(page) srcState.page=page;
+    const path = $('srcPath').value.trim();
+    const url = `/api/list?path=${encodeURIComponent(path)}&only=${$('srcOnly').value}&link=${$('srcLinkFilter').value}&sort=mtime&order=desc&page=${srcState.page}&page_size=${srcState.pageSize}`;
+    
+    try {
+        const j = await fetch(url).then(r=>r.json());
+        if(j.error) { console.error(j.error); return; }
+        
+        $('srcPath').value = j.path || path;
+        renderCrumbs('srcCrumbs', j.path, p => {$('srcPath').value=p; goSrc(1);});
+        
+        srcState.total = j.total || 0;
+        const totalPages = Math.max(1, Math.ceil(srcState.total / srcState.pageSize));
+        $('srcPageInfo').textContent = `${srcState.page} / ${totalPages} (共${srcState.total})`;
+        $('srcCountBadge').textContent = `${srcState.total}`;
+
+        const tb = $('srcBody'); tb.innerHTML = "";
+        if((j.items||[]).length === 0) {
+           tb.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">空目录</td></tr>';
+           return;
+        }
+
+        (j.items||[]).forEach(i => {
+            const tr = document.createElement('tr');
+            const isVideo = ['.mp4','.mkv','.avi','.mov','.iso'].some(e=>i.name.toLowerCase().endsWith(e));
+            const icon = i.is_dir ? '📁' : (isVideo ? '🎬' : '📄');
+            const safePath = i.path.replace(/'/g,"\\'");
+            const clickAction = i.is_dir ? `$('srcPath').value='${safePath}';goSrc(1);` : '';
+            
+            let badge = '';
+            if(i.link_mark === 'exact') badge = '<span class="badge" style="background:var(--success);color:white">已链</span>';
+            else if(i.link_mark === 'partial') badge = '<span class="badge" style="background:#f59e0b;color:white">部分</span>';
+
+            tr.innerHTML = `
+                <td class="col-check"><input type="checkbox" data-path="${i.path}"></td>
+                <td>
+                    <div class="item-name ${i.is_dir?'is-dir':''}" onclick="${clickAction}">
+                        <span style="font-size:1.2em;flex-shrink:0">${icon}</span>
+                        <span>${i.name}</span>
+                    </div>
+                </td>
+                <td class="col-size col-hide-mobile" style="color:var(--text-muted)">${i.is_dir ? '' : fmtSize(i.size)}</td>
+                <td class="col-status" align="center">${badge}</td>
+            `;
+            tb.appendChild(tr);
+        });
+    } catch(e) { 
+        alert("列表加载失败"); 
+    }
+}
+function srcPrev(){ if(srcState.page>1) goSrc(srcState.page-1); }
+function srcNext(){ const tp=Math.ceil(srcState.total/srcState.pageSize); if(srcState.page<tp) goSrc(srcState.page+1); }
+function toggleAllSrc(checked) { document.querySelectorAll('#srcBody input[type=checkbox]').forEach(c => c.checked = checked); }
+
+// --- 目标逻辑 ---
+async function goDst() {
+    const path = $('dstPath').value.trim();
+    const url = `/api/list?path=${encodeURIComponent(path)}&only=dirs&sort=name&order=asc&page=1&page_size=1000`;
+    try {
+        const j = await fetch(url).then(r=>r.json());
+        $('dstPath').value = j.path || path;
+        renderCrumbs('dstCrumbs', j.path, p => {$('dstPath').value=p; goDst();});
+        const tb = $('dstBody'); tb.innerHTML = "";
+        
+        if((j.items||[]).length === 0) {
+           tb.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-muted)">空目录</td></tr>';
+           return;
+        }
+
+        (j.items||[]).filter(x=>x.is_dir).forEach(i => {
+            const tr = document.createElement('tr');
+            const safePath = i.path.replace(/'/g,"\\'");
+            tr.innerHTML = `
+                <td>
+                    <div class="item-name is-dir" onclick="$('dstPath').value='${safePath}';goDst();">
+                        <span style="font-size:1.2em">📁</span> <span>${i.name}</span>
+                    </div>
+                </td>
+                <td class="col-size col-hide-mobile" style="color:var(--text-muted)">${fmtTime(i.mtime)}</td>
+            `;
+            tb.appendChild(tr);
+        });
+    } catch(e) { alert("目标列表失败"); }
+}
+
+async function init() {
+    initTheme();
+    try {
+        const p = await fetch("/api/presets").then(r=>r.json());
+        presets = p.pairs||[];
+        const sel = $('presetSel');
+        presets.forEach((x,i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = x.name; sel.appendChild(opt); });
+        await applyPreset();
+    } catch(e){ console.log("Init error",e); }
+    setInterval(refreshJobs, 3000);
+}
+async function applyPreset() {
+    const idx = $('presetSel').value || 0; const p = presets[idx]; if(!p) return;
+    currentPresetKey = (p.dst_root ? String(p.dst_root) : "default").replace(/[^a-zA-Z0-9_\-\/]/g, "_");
+    $('srcPath').value = p.src_root; $('dstPath').value = p.dst_root;
+    goSrc(1); goDst(); loadShortcutConfig();
+}
+async function loadShortcutConfig() {
+    try {
+        const r = await fetch(`/api/ui/shortcuts?preset_key=${encodeURIComponent(currentPresetKey)}`).then(x=>x.json());
+        if(r.ok && r.found) { $('shortcutBase').value = r.base_path || ""; targetShortcuts = r.shortcuts || []; } 
+        else { $('shortcutBase').value = normalizePath($('dstPath').value); targetShortcuts = []; }
+        renderShortcuts();
+    } catch(e){}
+}
+function renderShortcuts() {
+    const box = $('shortcutBox'); box.innerHTML = "";
+    targetShortcuts.forEach((sc, idx) => {
+        const tag = document.createElement('div'); tag.className = 'shortcut-tag';
+        tag.innerHTML = `<span onclick="jumpShortcut(${idx})">${sc.label}</span> <span style="opacity:0.5;margin-left:4px" onclick="removeShortcut(${idx})">✕</span>`;
+        box.appendChild(tag);
+    });
+}
+async function ensureDir(p){ await fetch("/api/mkdir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:normalizePath(p)})}); }
+async function jumpShortcut(idx) {
+    const sc = targetShortcuts[idx]; const base = normalizePath($('shortcutBase').value); const raw = (sc.path||"").trim();
+    const abs = raw.startsWith("/") ? raw : (base + "/" + raw);
+    await ensureDir(abs); $('dstPath').value = normalizePath(abs); goDst();
+}
+function addShortcut() {
+    const label=$('shortcutLabel').value.trim(), path=$('shortcutPath').value.trim();
+    if(!label) return; targetShortcuts.push({label, path}); renderShortcuts(); saveShortcutConfig();
+    $('shortcutLabel').value=""; $('shortcutPath').value="";
+}
+function removeShortcut(idx) { targetShortcuts.splice(idx, 1); renderShortcuts(); saveShortcutConfig(); }
+async function saveShortcutConfig() {
+    const base = normalizePath($('shortcutBase').value); if(!base) return;
+    await fetch("/api/ui/shortcuts", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({preset_key: currentPresetKey, base_path: base, shortcuts: targetShortcuts}) });
+}
+function syncBaseToDst() { $('shortcutBase').value = normalizePath($('dstPath').value); saveShortcutConfig(); alert("已设为快捷根目录"); }
+
+async function doPrecheck() {
+    const src = [...document.querySelectorAll('#srcBody input:checked')].map(x=>x.dataset.path);
+    if(!src.length) return alert("请先勾选源文件");
+    const r = await fetch("/api/precheck", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({src_items:src, dst_root:$('dstPath').value}) }).then(x=>x.json());
+    if(!r.ok) return alert("Error: "+r.error);
+    if(r.conflicts.length === 0) return alert("✅ 检查通过，无冲突。");
+    alert("⚠️ 发现冲突:\n" + r.conflicts.map(c => `[${c.type}] ${c.reason}\n 源: ${c.src}`).join("\n"));
+}
+async function doLink() {
+    const src = [...document.querySelectorAll('#srcBody input:checked')].map(x=>x.dataset.path);
+    if(!src.length) return alert("请先勾选源文件");
+    if(!confirm(`确认对 ${src.length} 个项目创建硬链接？`)) return;
+    const r = await fetch("/api/link", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({src_items: src, dst_root: $('dstPath').value, note: $('note').value, conflict_policy: $('conflictPolicy').value}) }).then(x=>x.json());
+    if(r.ok) { pendingJobIds.add(String(r.job_id)); alert("🚀 任务已后台运行"); toggleAllSrc(false); } else { alert("提交失败: " + r.error); }
+}
+async function refreshJobs() {
+    try {
+        const j = await fetch("/api/jobs?limit=20").then(r=>r.json());
+        let needsRefresh = false;
+        (j.jobs||[]).forEach(x => { if(pendingJobIds.has(String(x.id)) && (x.status==='DONE'||x.status==='FAILED')) { pendingJobIds.delete(String(x.id)); needsRefresh = true; } });
+        if(needsRefresh) goSrc(srcState.page);
+    } catch(e){}
+}
+
+function showLogs() { $('logsModal').classList.add('active'); loadRecords(0); }
+function closeLogs() { $('logsModal').classList.remove('active'); }
+async function loadRecords(offset) {
+    if(typeof offset === "number") recState.offset = Math.max(0, offset);
+    const inc = $('recIncludeDeleted').checked ? "1":"0";
+    const url = `/api/records?limit=${recState.limit}&offset=${recState.offset}&status=${$('recStatus').value}&include_deleted=${inc}`;
+    const j = await fetch(url).then(r=>r.json());
+    recState.total = j.total; $('recPageInfo').textContent = `${recState.offset+1}-${Math.min(recState.offset+recState.limit, recState.total)} / ${j.total}`;
+    const tb = $('recBody'); tb.innerHTML="";
+    (j.rows||[]).forEach(r => {
+        const tr = document.createElement('tr');
+        const color = r.status==='OK'?'var(--success)':(r.status==='FAIL'?'var(--danger)':'var(--text-muted)');
+        const info = r.status === 'FAIL' ? `源: ${r.src}<br><strong style="color:var(--danger)">${r.message}</strong>` : (r.src + (r.note ? `<br><span style="color:var(--text-muted)">注: ${r.note}</span>` : ''));
+        tr.innerHTML = `
+            <td class="col-check"><input type="checkbox" data-src="${r.src}" data-dst="${r.dst}" data-type="${r.item_type}"></td>
+            <td class="col-hide-mobile"><strong>${r.op}</strong></td>
+            <td style="font-size:13px;word-break:break-all;line-height:1.4">${info}</td>
+            <td class="col-hide-mobile" style="font-size:13px;word-break:break-all">${r.dst}</td>
+            <td class="col-status" style="color:${color};font-weight:700">${r.status}</td>
+        `;
+        tb.appendChild(tr);
+    });
+}
+function recPrev(){ if(recState.offset>0) loadRecords(recState.offset-recState.limit); }
+function recNext(){ if(recState.offset+recState.limit < recState.total) loadRecords(recState.offset+recState.limit); }
+function toggleAllRec(checked) { document.querySelectorAll('#recBody input[type=checkbox]').forEach(c => c.checked = checked); }
+
+async function doDelete() {
+    const confirm = $('delConfirm').checked;
+    if(!confirm) return alert("请先勾选“确认执行”");
+    const items = [...document.querySelectorAll('#recBody input:checked')].map(x=>({src:x.dataset.src, dst:x.dataset.dst, type:x.dataset.type||"FILE"}));
+    if(!items.length) return alert("请先勾选要删除的记录");
+    
+    const r = await fetch("/api/delete", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ mode: $('delMode').value, items: items, confirm: true })
+    }).then(x=>x.json());
+
+    if(r.ok) {
+        alert("✅ 删除执行完毕");
+        $('delConfirm').checked = false;
+        loadRecords(recState.offset);
+        goDst(); goSrc(srcState.page);
+    } else {
+        alert("❌ 删除失败: " + r.error);
+    }
+}
+
+init();
+
+
+
+let mgState = {
+  groups: [],
+  filtered: [],
+  shown: null,
+  page: 1,
+  pageSize: 100
+};
+
+function showManage() {
+  $('manageModal').classList.add('active');
+  mgState.page = 1;
+  mgState.pageSize = parseInt($('mgPageSize').value || "100", 10);
+  loadManage();
+}
+function closeManage() {
+  $('manageModal').classList.remove('active');
+  hideManageDetail();
+}
+function hideManageDetail() {
+  $('mgDetail').style.display = 'none';
+}
+
+function mgSetPageSize() {
+  mgState.pageSize = parseInt($('mgPageSize').value || "100", 10);
+  mgState.page = 1;
+  loadManage();
+}
+function mgPrev() {
+  if(mgState.page <= 1) return;
+  mgState.page -= 1;
+  loadManage();
+}
+function mgNext() {
+  const maxPage = Math.max(1, Math.ceil((mgState.total||0) / (mgState.pageSize||100)));
+  if(mgState.page >= maxPage) return;
+  mgState.page += 1;
+  loadManage();
+}
+
+async function loadManage() {
+  $('mgInfo').textContent = "扫描中…（目录大时会稍慢）";
+  const offset = (mgState.page - 1) * mgState.pageSize;
+  const url = `/api/hardlinks/groups?offset=${offset}&limit_groups=${mgState.pageSize}&max_paths=200`;
+  const j = await fetch(url).then(r=>r.json());
+  if(!j.ok){ alert(j.error || "扫描失败"); return; }
+
+  mgState.groups = j.groups || [];
+  mgState.total = j.total_groups || (j.groups ? j.groups.length : 0);
+  mgState.scanned = j.scanned_files || 0;
+
+  const maxPage = Math.max(1, Math.ceil((mgState.total||0) / (mgState.pageSize||100)));
+  $('mgInfo').textContent = `发现硬链接组：${mgState.total}（本页：${mgState.groups.length}，扫描文件：${mgState.scanned}） 第 ${mgState.page}/${maxPage} 页`;
+  renderManage();
+}
+
+function renderManage() {
+  const kw = ($('mgSearch').value || "").trim().toLowerCase();
+
+  mgState.filtered = (mgState.groups || []).filter(g => {
+    if(!kw) return true;
+    const src = (g.src || "").toLowerCase();
+    if(src.includes(kw)) return true;
+    return (g.targets || []).some(p => (p||"").toLowerCase().includes(kw));
+  });
+
+  const total = mgState.filtered.length;
+  const pageSize = mgState.pageSize || 100;
+  const maxPage = Math.max(1, Math.ceil(total / pageSize));
+  if(mgState.page > maxPage) mgState.page = maxPage;
+
+  const start = (mgState.page - 1) * pageSize;
+  const end = start + pageSize;
+  const rows = mgState.filtered.slice(start, end);
+
+  if($('mgPageInfo')) $('mgPageInfo').textContent = `第 ${mgState.page}/${maxPage} 页，共 ${total} 组`;
+
+  const tb = $('mgBody');
+  tb.innerHTML = "";
+
+  rows.forEach((g, idx) => {
+    const realIndex = start + idx;
+    const tr = document.createElement('tr');
+    const safeTitle = (g.src||"").replace(/"/g,'&quot;');
+    tr.innerHTML = `
+      <td>${realIndex + 1}</td>
+      <td class="mg-src-cell" title="${safeTitle}">${g.src || ""}</td>
+      <td class="col-hide-mobile">${(g.targets||[]).length}</td>
+      <td><button class="ghost" onclick="showManageDetail(${realIndex})">查看</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+);
+
+  mgState.filtered = rows;
+
+  rows.forEach((g, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td class="mg-src-cell" title="${escapeHtml(g.src||'')}">${escapeHtml(g.src || "")}</td>
+      <td class="col-hide-mobile">${(g.targets||[]).length}</td>
+      <td><button class="ghost" onclick="showManageDetail(${idx})">查看</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  // 空结果提示
+  if(!rows.length){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="4" style="padding:14px;color:var(--text-muted)">无结果（可尝试清空搜索或点击“刷新”）</td>`;
+    tb.appendChild(tr);
+  }
+
+  hideManageDetail(); // 每次刷新/过滤后收起详情，避免索引错位
+}
+
+function showManageDetail(index) {
+  const g = (mgState.filtered || [])[index];
+  const g = (mgState.filtered || [])[index];
+  if(!g) return;
+
+  $('mgDetail').style.display = 'block';
+  $('mgDetailSrc').textContent = g.src || "";
+  $('mgDetailInode').textContent = `${g.dev}:${g.ino} (n=${(g.targets||[]).length + 1})`;
+
+  const wrap = $('mgDetailList');
+  wrap.innerHTML = "";
+
+  // 目标列表
+  (g.targets || []).forEach(p => {
+    const row = document.createElement('div');
+    row.className = "mg-path";
+    row.innerHTML = `
+      <div class="p" title="${escapeHtml(p)}">${escapeHtml(p)}</div>
+      <div style="display:flex; gap:8px; flex-shrink:0">
+        <button class="ghost" style="border-color:#fecaca;color:var(--danger)" onclick="mgUnlink('${escapeJs(p)}')">删除</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+
+  if(!(g.targets||[]).length){
+    const row = document.createElement('div');
+    row.style.color = "var(--text-muted)";
+    row.textContent = "该组在当前扫描范围内未发现其它路径（可能其它硬链接在未纳入扫描的目录/卷）。";
+    wrap.appendChild(row);
+  }
+}
+
+function escapeJs(s){
+  return String(s)
+    .replace(/\/g, "\\")
+    .replace(/'/g, "\'")
+    .replace(/
+/g, "\n");
+}
+function escapeHtml(s){
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
+async function mgDeleteSelected(){
+  const cbs = Array.from(document.querySelectorAll('.mg-tgt-cb:checked'));
+  if(!cbs.length){ toast('未选择任何目标路径'); return; }
+  if(!confirm(`确认删除选中的 ${cbs.length} 个目标路径吗？
+（仅 unlink 该路径，不会删除其它硬链接副本）`)) return;
+  for(const cb of cbs){
+    const p = cb.getAttribute('data-path');
+    try{
+      await mgUnlink(p);
+    }catch(e){
+      console.error(e);
+      toast('删除失败：' + (e?.message || e));
+      break;
+    }
+  }
+  await loadManage(false);
+}
+
+
+async function mgUnlink(path) {
+  if(!confirm(`确认删除该路径（unlink）？
+
+${path}
+
+注意：只删除该目录项，其它硬链接仍保留。`)) return;
+  const r = await fetch("/api/hardlinks/unlink", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ path })
+  }).then(x=>x.json());
+
+  if(!r.ok) return alert(r.error || "删除失败");
+  await loadManage();
+}
+
+</script>
+
+
+<div id="manageModal">
+  <div class="modal-content">
+    <div class="modal-header" style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <strong>🧰 硬链接管理（外部/本工具生成）</strong>
+      <button class="ghost" onclick="closeManage()">关闭 ✕</button>
+    </div>
+
+    <div style="padding:12px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center; background: var(--bg-body);">
+      <input id="mgSearch" type="text" placeholder="搜索路径关键词（源/目标）" style="flex:1" oninput="renderManage()">
+      <button class="ghost" onclick="loadManage()">刷新</button>
+    </div>
+
+    <div class="pane-body">
+      <table>
+        <thead style="background:var(--bg-body)">
+          <tr>
+            <th width="36">#</th>
+            <th>源（稳定 canonical）</th>
+            <th class="col-hide-mobile" class="mg-col-count">目标数量</th>
+            <th width="90">操作</th>
+          </tr>
+        </thead>
+        <tbody id="mgBody"></tbody>
+      </table>
+
+      <div id="mgDetailPane"><div id="mgDetail" style="display:none; border-top:1px solid var(--border); padding:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div style="font-weight:700">组详情</div></div>
+          <button class="ghost" onclick="hideManageDetail()">收起</button>
+        </div>
+
+        <div style="margin-top:8px; color:var(--text-muted); font-size:13px">
+          <div><strong>源：</strong><span id="mgDetailSrc"></span></div>
+          <div style="margin-top:4px"><strong>inode：</strong><span id="mgDetailInode"></span></div>
+        </div>
+
+        <div style="margin-top:10px; font-weight:700">目标路径（删除=unlink 该路径）</div>
+        <div id="mgDetailList" style="margin-top:8px; display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+    </div>
+
+    
+<div class="pane-footer">
+  <span id="mgInfo" style="color:var(--text-muted)"></span>
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+    <label class="col-hide-mobile" style="color:var(--text-muted)">每页</label>
+    <select id="mgPageSize" onchange="mgSetPageSize()">
+      <option value="50">50</option>
+      <option value="100" selected>100</option>
+      <option value="200">200</option>
+    </select>
+    <button class="ghost" onclick="mgPrev()">上一页</button>
+    <button class="ghost" onclick="mgNext()">下一页</button>
+    <span id="mgPageInfo" style="color:var(--text-muted)"></span>
+    <button class="ghost" onclick="loadManage()">刷新</button>
+    <button class="ghost" onclick="loadManage(true)">重新扫描</button>
+  </div>
+</div>
+</div>
+
+  </div>
+</div>
+
+</body>
+</html>

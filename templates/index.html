@@ -1,0 +1,2090 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <title>{{ t('APP_TITLE') }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="icon" href="/static/favicon.jpg?v=4">
+
+  <style>
+    /* --- 全局变量 --- */
+    :root {
+      --bg-body: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --success: #059669;
+
+      /* New semantic colors */
+      --bg-danger: #fef2f2;
+      --bg-danger-hover: #fee2e2;
+      --border-danger: #fecaca;
+
+      --header-height: 60px;
+    }
+
+    html[data-theme="dark"] {
+      --bg-body: #0f172a;
+      --bg-card: #1e293b;
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #60a5fa;
+      --primary-hover: #93c5fd;
+      --danger: #f87171;
+      --success: #34d399;
+
+      /* Dark mode semantic colors */
+      --bg-danger: rgba(220, 38, 38, 0.15);
+      --bg-danger-hover: rgba(220, 38, 38, 0.25);
+      --border-danger: rgba(220, 38, 38, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      background: var(--bg-body);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* --- 1. 顶部 Header --- */
+    .header {
+      height: var(--header-height);
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      /* reduced gap */
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      font-weight: 800;
+      font-size: 16px;
+      /* smaller brand */
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .brand span {
+      display: none;
+      /* hide emoji globally if desired, or just restore it? Original was displayed. Let's keep it hidden for mobile opt or restore default */
+    }
+
+    /* Let's partially revert brand span hiding for desktop if needed, but the previous edit established it. I will leave it as is for now in this block or fix it if I overstepped. Actually the valid CSS was in media query. Here is global. */
+    /* Wait, the previous edit put .brand span { display: none } in the media query. In global it was display:flex/block implicitly. 
+       I should be careful not to override global styles incorrectly. */
+
+    /* RE-CHECK ORIGINAL CODE FOR HEADER: */
+    /* 
+    68:     .brand {
+    69:       font-weight: 800;
+    70:       font-size: 18px;
+    ...
+    */
+    /* My replacement covers lines 12-465 roughly. */
+
+    /* Let's continue with safe replacements */
+
+    .header-tools {
+      display: flex;
+      flex: 1;
+      justify-content: flex-end;
+      gap: 6px;
+      align-items: center;
+      overflow-x: auto;
+      padding-right: 2px;
+    }
+
+    .header-tools::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* --- 2. 主体容器 (包含 PanesWrapper 和 ActionBar) --- */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* --- 3. 分栏容器 (Source + Target) --- */
+    .panes-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      background: var(--border);
+      gap: 1px;
+    }
+
+    /* 单个面板 */
+    .pane {
+      flex: 1;
+      background: var(--bg-body);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      height: 100%;
+    }
+
+    .pane-header {
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .pane-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pane-title {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pane-tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pane-tools input[type=text] {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .pane-body {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-card);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .pane-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-body);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+
+    /* --- 4. 底部操作栏 (Action Bar) --- */
+    .action-bar {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+      z-index: 20;
+      flex-shrink: 0;
+      height: auto;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mobile-action-title {
+      display: none;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    /* --- 5. 手机底部导航 (Mobile Nav) --- */
+    .mobile-nav {
+      display: none;
+      height: 60px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 50;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      gap: 4px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background: rgba(37, 99, 235, 0.05);
+    }
+
+    .nav-icon {
+      font-size: 20px;
+    }
+
+    /* --- 通用组件 --- */
+    button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    button.primary:active {
+      background: var(--primary-hover);
+      transform: translateY(1px);
+    }
+
+    button.ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    button.ghost:active {
+      background: var(--border);
+      color: var(--text-main);
+    }
+
+    /* THEME AWARE DANGER BUTTON */
+    button.danger {
+      background: var(--bg-danger);
+      color: var(--danger);
+      border: 1px solid var(--border-danger);
+    }
+
+    button.danger:hover {
+      background: var(--bg-danger-hover);
+    }
+
+    button.danger:active {
+      transform: translateY(1px);
+    }
+
+    input[type=text],
+    select {
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      height: 38px;
+    }
+
+    input[type=text]:focus,
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    /* --- 表格 (主界面) --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-body);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    tr:hover td {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    .col-check {
+      width: 40px;
+      text-align: center;
+      padding: 0 !important;
+    }
+
+    .col-check input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+
+    .col-size {
+      width: 90px;
+    }
+
+    .col-status {
+      width: 70px;
+      text-align: center;
+    }
+
+    .item-name {
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-main);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .is-dir {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .crumbs a {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .crumbs a:hover {
+      color: var(--primary);
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .crumbs span.sep {
+      color: var(--border);
+      font-size: 12px;
+      margin: 0 2px;
+    }
+
+    .shortcuts-area {
+      padding: 10px 16px;
+      background: var(--bg-body);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .shortcut-tag {
+      font-size: 13px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 99px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    /* --- 日志弹窗 --- */
+    #logsModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+
+    #logsModal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      width: 90%;
+      max-width: 1000px;
+      height: 85vh;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* THEME AWARE DELETE TOOLBAR */
+    .delete-toolbar {
+      background: var(--bg-danger);
+      border-top: 1px solid var(--border-danger);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .delete-options {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* =========================================
+       📱 手机端适配
+    ========================================= */
+    @media (max-width: 850px) {
+      .panes-wrapper {
+        display: block;
+        background: var(--bg-body);
+      }
+
+      .pane {
+        display: none;
+        height: 100% !important;
+        width: 100%;
+      }
+
+      .pane.mobile-active {
+        display: flex;
+      }
+
+      .action-bar {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        height: 100%;
+        border-top: none;
+        padding: 20px;
+        gap: 16px;
+      }
+
+      .action-bar.mobile-active {
+        display: flex;
+      }
+
+      .mobile-action-title {
+        display: block;
+      }
+
+      .action-group {
+        flex-direction: column;
+        align-items: stretch;
+        background: var(--bg-card);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        gap: 12px;
+      }
+
+      .action-bar input,
+      .action-bar select,
+      .action-bar button {
+        width: 100%;
+        height: 48px;
+        font-size: 16px;
+      }
+
+      .action-bar label {
+        font-weight: 700;
+        color: var(--text-muted);
+        font-size: 14px;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .mobile-nav {
+        display: flex;
+      }
+
+      /* Header Mobile Optimization */
+      .header {
+        padding: 0 10px;
+        gap: 8px;
+        /* reduced gap */
+      }
+
+      .brand {
+        font-size: 16px;
+        /* smaller brand */
+      }
+
+      .brand span {
+        display: none;
+        /* hide emoji on super small screens if needed, or keep */
+      }
+
+      .header-tools {
+        flex: 1;
+        justify-content: flex-end;
+        gap: 6px;
+        /* smaller gap between tools */
+        overflow-x: auto;
+        /* allow scroll if too tight */
+        padding-right: 2px;
+      }
+
+      .header-tools::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* hide scrollbar */
+
+      .header-tools button {
+        padding: 4px 8px;
+        /* smaller padding */
+        font-size: 13px;
+      }
+
+      /* Restore text display */
+      .header-tools button span {
+        display: inline !important;
+      }
+
+      /* reduce select width on mobile */
+      #presetSel {
+        max-width: 100px !important;
+        padding: 4px 6px;
+        font-size: 13px;
+        height: 32px;
+      }
+
+      /* Mobile Toolbar */
+      .mobile-toolbar {
+        display: none;
+        background: var(--bg-body);
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        flex-direction: column;
+        gap: 8px;
+        animation: fadeIn 0.3s;
+      }
+
+      .mobile-toolbar.active {
+        display: flex;
+      }
+
+      .mobile-toolbar #presetSel {
+        width: 100%;
+        max-width: none !important;
+        height: 36px;
+        font-size: 14px;
+      }
+
+      .mobile-toolbar .tools-row {
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+      }
+
+      .mobile-toolbar button {
+        flex: 1;
+        justify-content: center;
+        padding: 6px 4px;
+        font-size: 12px;
+      }
+
+      .mobile-toolbar button span {
+        display: inline !important;
+        /* Force show text */
+      }
+
+      .col-hide-mobile {
+        display: none;
+      }
+
+      .col-check {
+        width: 36px;
+      }
+
+      .col-status {
+        width: 50px;
+        font-size: 12px;
+      }
+
+      #logsModal {
+        align-items: flex-end;
+      }
+
+      .modal-content {
+        width: 100%;
+        height: 92vh;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .delete-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .delete-options {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    /* =========================================
+       Hard Link Manager Modal (UI Optimized)
+       ========================================= */
+    #manageModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    #manageModal.active {
+      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #manageModal .modal-content {
+      width: 90%;
+      max-width: 1000px;
+      height: 85vh;
+      background: var(--bg-card);
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.96) translateY(10px);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #manageModal.active .modal-content {
+      transform: scale(1) translateY(0);
+    }
+
+    /* Header */
+    #manageModal .modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #manageModal .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #manageModal .modal-title-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    /* Toolbar */
+    #manageModal .modal-toolbar {
+      padding: 12px 24px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #manageModal .search-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 500px;
+    }
+
+    #manageModal .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+    }
+
+    #manageModal input.input-search {
+      width: 100%;
+      padding: 10px 12px 10px 38px;
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      height: 40px;
+      transition: all 0.2s;
+    }
+
+    #manageModal input.input-search:focus {
+      background: var(--bg-card);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Table Container */
+    #manageModal .modal-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-body);
+      overflow: hidden;
+    }
+
+    #manageModal .list-pane {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-card);
+    }
+
+    /* --- 核心优化：管理弹窗表格样式 --- */
+    #manageModal table {
+      width: 100%;
+      border-collapse: collapse;
+      /* 消除间隙 */
+      table-layout: fixed;
+      /* 防止撑破 */
+    }
+
+    #manageModal th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    #manageModal td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      /* 核心修复：复选框和文字垂直居中 */
+      color: var(--text-main);
+    }
+
+    /* 复选框列 */
+    #manageModal .col-check {
+      width: 48px;
+      text-align: center;
+      padding: 0 !important;
+    }
+
+    #manageModal .col-check input {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    /* 文件夹行样式 */
+    .mg-folder-row {
+      background: var(--bg-body);
+      cursor: pointer;
+      transition: background 0.15s;
+      font-weight: 600;
+    }
+
+    .mg-folder-row:hover {
+      background: var(--border);
+    }
+
+    .mg-folder-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .mg-folder-row.expanded .mg-folder-icon {
+      transform: rotate(90deg);
+      color: var(--primary);
+    }
+
+    /* 文件行样式 */
+    .mg-file-row {
+      background: var(--bg-card);
+    }
+
+    .mg-file-row:hover td {
+      background: rgba(37, 99, 235, 0.04);
+    }
+
+    /* 路径单元格：字体与对齐修复 */
+    .mg-path-cell {
+      font-family: inherit;
+      /* 去除 monospace，使用全局字体 */
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 视觉引导线：替代纯 padding */
+    .mg-indent-guide {
+      display: flex;
+      align-items: center;
+      padding-left: 16px;
+      margin-left: 12px;
+      border-left: 2px solid var(--border);
+      height: 100%;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      border: none;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+      height: 28px;
+    }
+
+    /* Detail Pane (Bottom) */
+    #manageModal .detail-pane {
+      height: 280px;
+      border-top: 2px solid var(--border);
+      background: var(--bg-card);
+      overflow-y: auto;
+      display: none;
+      flex: 0 0 auto;
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+    }
+
+    #manageModal .detail-pane.active {
+      display: block;
+      animation: slideUp 0.2s;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    #manageModal .detail-header {
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-body);
+    }
+
+    #manageModal .detail-content {
+      padding: 16px 24px;
+    }
+
+    /* Footer */
+    #manageModal .modal-footer {
+      padding: 12px 24px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    #manageModal .pagination {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    @media (max-width: 650px) {
+      #manageModal .modal-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+      }
+
+      #manageModal .modal-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #manageModal .search-wrapper {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <div class="brand">
+      <img src="/static/favicon.jpg?v=4" style="width:24px;height:24px;border-radius:4px" alt="icon">
+      {{ t('BRAND_NAME') }}
+    </div>
+    <div class="header-tools" id="headerTools">
+      <select id="presetSel" style="max-width:140px" onchange="applyPreset()"></select>
+      <!-- Load button removed, auto-load on change -->
+      <button class="ghost" onclick="toggleTheme()">🌓<span> {{ t('THEME_BTN') }}</span></button>
+      <button class="ghost" onclick="toggleLang()">🌐<span> {{ t('LANG_BTN') }}</span></button>
+      <button class="ghost" onclick="showManage()">🧰<span> {{ t('MANAGE_BTN') }}</span></button>
+      <button class="ghost" onclick="showLogs()">📜<span> {{ t('LOGS_BTN') }}</span></button>
+    </div>
+  </div>
+
+  <div id="mobileToolbar" class="mobile-toolbar"></div>
+
+  <div class="main-layout">
+
+    <div class="panes-wrapper" id="panesWrapper">
+
+      <div id="pane-src" class="pane mobile-active">
+        <div class="pane-header">
+          <div class="pane-title-row">
+            <div class="pane-title">📦 {{ t('PANE_SRC_TITLE') }}</div>
+            <span id="srcCountBadge" class="badge" style="background:var(--border);color:var(--text-muted)">0</span>
+          </div>
+          <div class="pane-tools">
+            <input id="srcPath" type="text" placeholder="{{ t('PLACEHOLDER_SEARCH') }}" onchange="goSrc(1)">
+            <select id="srcOnly" onchange="goSrc(1)">
+              <option value="all">{{ t('OPT_SHOW_ALL') }}</option>
+              <option value="dirs">{{ t('OPT_DIRS_ONLY') }}</option>
+              <option value="video">{{ t('OPT_VIDEO_ONLY') }}</option>
+            </select>
+            <select id="srcLinkFilter" onchange="goSrc(1)">
+              <option value="all">{{ t('OPT_STATUS') }}</option>
+              <option value="unlinked">{{ t('OPT_UNLINKED') }}</option>
+              <option value="linked">{{ t('OPT_LINKED') }}</option>
+            </select>
+            <button class="ghost" onclick="goSrc(1)">🔄 {{ t('BTN_REFRESH') }}</button>
+          </div>
+          <div class="crumbs" id="srcCrumbs"></div>
+        </div>
+        <div class="pane-body">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-check"><input type="checkbox" id="srcAll" onchange="toggleAllSrc(this.checked)"></th>
+                <th>{{ t('TH_FILENAME') }}</th>
+                <th class="col-size col-hide-mobile">{{ t('TH_SIZE') }}</th>
+                <th class="col-status" align="center">{{ t('TH_STATUS') }}</th>
+              </tr>
+            </thead>
+            <tbody id="srcBody"></tbody>
+          </table>
+        </div>
+        <div class="pane-footer">
+          <div id="srcPageInfo">Wait...</div>
+          <div style="display:flex; gap:8px">
+            <button class="ghost" onclick="srcPrev()">上一页</button>
+            <button class="ghost" onclick="srcNext()">下一页</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="pane-dst" class="pane">
+        <div class="pane-header">
+          <div class="pane-title-row">
+            <div class="pane-title">🎯 {{ t('PANE_DST_TITLE') }}</div>
+            <button class="ghost" style="padding:4px 8px; font-size:12px" onclick="syncBaseToDst()">{{ t('BTN_SET_ROOT')
+              }}</button>
+          </div>
+          <div class="pane-tools">
+            <input id="dstPath" type="text" placeholder="{{ t('PLACEHOLDER_SEARCH') }}" onchange="goDst()">
+            <button class="ghost" onclick="goDst()">🔄 {{ t('BTN_REFRESH') }}</button>
+          </div>
+          <div class="crumbs" id="dstCrumbs"></div>
+        </div>
+        <div class="shortcuts-area" id="shortcutBox"></div>
+        <div class="pane-body">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('TH_DIR_NAME') }}</th>
+                <th class="col-size col-hide-mobile">{{ t('TH_TIME') }}</th>
+              </tr>
+            </thead>
+            <tbody id="dstBody"></tbody>
+          </table>
+        </div>
+        <div class="pane-footer" style="display:block; padding-top:10px">
+          <div style="display:flex; gap:8px; width:100%">
+            <input id="shortcutLabel" type="text" placeholder="{{ t('PLACEHOLDER_SHORTCUT_NAME') }}"
+              style="width:80px; flex-shrink:0">
+            <input id="shortcutPath" type="text" placeholder="{{ t('PLACEHOLDER_SHORTCUT_PATH') }}" style="flex:1">
+            <button class="ghost" onclick="addShortcut()">➕ {{ t('BTN_ADD') }}</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div id="actionBar" class="action-bar">
+      <div class="mobile-action-title">🚀 {{ t('ACT_TITLE') }}</div>
+
+      <div class="action-group">
+        <label class="mobile-show">{{ t('LBL_POLICY') }}</label>
+        <select id="conflictPolicy">
+          <option value="skip">{{ t('OPT_SKIP') }}</option>
+          <option value="overwrite">{{ t('OPT_OVERWRITE') }}</option>
+          <option value="rename">{{ t('OPT_RENAME') }}</option>
+        </select>
+      </div>
+
+      <div class="action-group">
+        <label class="mobile-show">{{ t('LBL_NOTE') }}</label>
+        <input id="note" type="text" placeholder="{{ t('PLACEHOLDER_NOTE') }}">
+      </div>
+
+      <div class="action-group">
+        <button class="ghost" onclick="doPrecheck()">{{ t('BTN_PRECHECK') }}</button>
+        <button class="primary" onclick="doLink()" style="min-width:140px">{{ t('BTN_LINK') }}</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mobile-nav">
+    <div class="nav-item active" onclick="switchTab('src')">
+      <span class="nav-icon">📦</span>
+      <span>{{ t('NAV_SRC') }}</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('dst')">
+      <span class="nav-icon">🎯</span>
+      <span>{{ t('NAV_DST') }}</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('act')">
+      <span class="nav-icon">🚀</span>
+      <span>{{ t('NAV_ACT') }}</span>
+    </div>
+  </div>
+
+  <div id="logsModal">
+    <div class="modal-content">
+      <div class="modal-header"
+        style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <strong>{{ t('LOGS_TITLE') }}</strong>
+        <button class="ghost" onclick="closeLogs()">{{ t('BTN_CLOSE') }}</button>
+      </div>
+      <div
+        style="padding:12px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center; background: var(--bg-body);">
+        <select id="recStatus" onchange="loadRecords(0)" style="flex:1">
+          <option value="">{{ t('OPT_ALL_STATUS') }}</option>
+          <option value="OK">{{ t('OPT_OK') }}</option>
+          <option value="FAIL">{{ t('OPT_FAIL') }}</option>
+        </select>
+        <label style="font-size:13px;display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox"
+            id="recIncludeDeleted" checked onchange="loadRecords(0)">{{ t('LBL_INCLUDE_DELETED') }}</label>
+        <button class="ghost" onclick="loadRecords(0)">{{ t('BTN_REFRESH') }}</button>
+      </div>
+      <div class="pane-body">
+        <table>
+          <thead style="background:var(--bg-body)">
+            <tr>
+              <th class="col-check"><input type="checkbox" onchange="toggleAllRec(this.checked)"></th>
+              <th class="col-hide-mobile" width="100">{{ t('TH_OP') }}</th>
+              <th>{{ t('TH_SRC_INFO') }}</th>
+              <th class="col-hide-mobile">{{ t('TH_DST') }}</th>
+              <th class="col-status">{{ t('TH_STATUS') }}</th>
+            </tr>
+          </thead>
+          <tbody id="recBody"></tbody>
+        </table>
+      </div>
+      <div class="pane-footer">
+        <span id="recPageInfo"></span>
+        <div style="display:flex; gap:8px">
+          <button class="ghost" onclick="recPrev()">◀</button>
+          <button class="ghost" onclick="recNext()">▶</button>
+        </div>
+      </div>
+      <div class="delete-toolbar">
+        <div style="font-weight:700; color:var(--danger); font-size:14px">{{ t('LBL_DELETE_OP') }}</div>
+        <div class="delete-options" style="flex:1">
+          <select id="delMode" style="flex:1; border-color:#fecaca">
+            <option value="target_recursive">{{ t('OPT_DEL_TARGET_REC') }}</option>
+            <option value="target">{{ t('OPT_DEL_TARGET') }}</option>
+            <option value="both">{{ t('OPT_DEL_BOTH') }}</option>
+          </select>
+          <label style="font-size:13px; color:var(--danger); font-weight:600; white-space:nowrap">
+            <input type="checkbox" id="delConfirm"> {{ t('LBL_CONFIRM_EXEC') }}
+          </label>
+          <button class="danger" onclick="doDelete()">{{ t('BTN_EXEC_DELETE') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="hidden" id="shortcutBase">
+  <input type="hidden" id="srcSort" value="mtime">
+  <input type="hidden" id="srcOrder" value="desc">
+  <input type="hidden" id="srcPageSize" value="100">
+  <input type="hidden" id="recPageSize" value="50">
+  <input type="hidden" id="srcQ" value="">
+  <input type="hidden" id="srcHidden" value="0">
+  <input type="hidden" id="recQ" value="">
+  <input type="hidden" id="recOp" value="">
+
+  <input type="hidden" id="recOp" value="">
+
+  <script>
+    const I18N_DATA = {{ i18n_json | safe }};
+    const CUR_LANG = "{{ lang }}";
+    function t(key, def) {
+      return I18N_DATA[key] || def || key;
+    }
+    function toggleLang() {
+      location.href = '/?lang=' + (CUR_LANG === 'zh' ? 'en' : 'zh');
+    }
+
+  </script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const fmtTime = t => new Date(t * 1000).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const fmtSize = n => {
+      if (!n) return "-"; const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0, x = n;
+      while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; } return x.toFixed(1) + " " + u[i];
+    };
+    const normalizePath = p => { if (!p) return ""; let s = String(p).trim().replace(/\/+$/, ""); return s || "/"; };
+
+    let presets = [], targetShortcuts = [], currentPresetKey = "default";
+    let srcState = { page: 1, total: 0, pageSize: 100 };
+    let recState = { offset: 0, total: 0, limit: 50 };
+    let pendingJobIds = new Set();
+
+    function initTheme() {
+      const v = localStorage.getItem("theme") || "light";
+      document.documentElement.setAttribute("data-theme", v);
+    }
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute("data-theme");
+      const next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+    }
+
+    // --- 📱 Tab Logic ---
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.nav-item[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+      const wrapper = $('panesWrapper');
+      const src = $('pane-src');
+      const dst = $('pane-dst');
+      const bar = $('actionBar');
+
+      if (tab === 'src') {
+        wrapper.style.display = 'block';
+        src.classList.add('mobile-active');
+        dst.classList.remove('mobile-active');
+        bar.classList.remove('mobile-active');
+      } else if (tab === 'dst') {
+        wrapper.style.display = 'block';
+        src.classList.remove('mobile-active');
+        dst.classList.add('mobile-active');
+        bar.classList.remove('mobile-active');
+      } else if (tab === 'act') {
+        wrapper.style.display = 'none';
+        bar.classList.add('mobile-active');
+      }
+    }
+
+    function renderCrumbs(elId, path, cb) {
+      const el = $(elId); el.innerHTML = "";
+      const parts = (path || "").split("/").filter(Boolean);
+      let cur = "/";
+      const root = document.createElement('a'); root.textContent = "ROOT"; root.href = "javascript:void(0)"; root.onclick = () => cb("/"); el.appendChild(root);
+      parts.forEach(p => {
+        const sep = document.createElement('span'); sep.className = "sep"; sep.textContent = "/"; el.appendChild(sep);
+        cur = (cur === "/" ? "" : cur) + "/" + p; const target = cur;
+        const a = document.createElement('a'); a.textContent = p; a.href = "javascript:void(0)"; a.onclick = () => cb(target); el.appendChild(a);
+      });
+      el.scrollLeft = el.scrollWidth;
+    }
+
+    // --- Source Logic ---
+    async function goSrc(page) {
+      if (page) srcState.page = page;
+      const path = $('srcPath').value.trim();
+      const url = `/api/list?path=${encodeURIComponent(path)}&only=${$('srcOnly').value}&link=${$('srcLinkFilter').value}&sort=mtime&order=desc&page=${srcState.page}&page_size=${srcState.pageSize}`;
+
+      try {
+        const j = await fetch(url).then(r => r.json());
+        if (j.error) { console.error(j.error); return; }
+
+        $('srcPath').value = j.path || path;
+        renderCrumbs('srcCrumbs', j.path, p => { $('srcPath').value = p; goSrc(1); });
+
+        srcState.total = j.total || 0;
+        const totalPages = Math.max(1, Math.ceil(srcState.total / srcState.pageSize));
+        $('srcPageInfo').textContent = `${srcState.page} / ${totalPages} (共${srcState.total})`;
+        $('srcCountBadge').textContent = `${srcState.total}`;
+
+        const tb = $('srcBody'); tb.innerHTML = "";
+        if ((j.items || []).length === 0) {
+          tb.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">空目录</td></tr>';
+          return;
+        }
+
+        (j.items || []).forEach(i => {
+          const tr = document.createElement('tr');
+          const isVideo = ['.mp4', '.mkv', '.avi', '.mov', '.iso'].some(e => i.name.toLowerCase().endsWith(e));
+          const icon = i.is_dir ? '📁' : (isVideo ? '🎬' : '📄');
+          const safePath = i.path.replace(/'/g, "\\'");
+          const clickAction = i.is_dir ? `$('srcPath').value='${safePath}';goSrc(1);` : '';
+
+          let badge = '';
+          if (i.link_mark === 'exact') badge = `<span class="badge" style="background:var(--success);color:white">${t('BADGE_LINKED')}</span>`;
+          else if (i.link_mark === 'partial') badge = `<span class="badge" style="background:#f59e0b;color:white">${t('BADGE_PARTIAL')}</span>`;
+
+          tr.innerHTML = `
+                <td class="col-check"><input type="checkbox" data-path="${i.path}"></td>
+                <td>
+                    <div class="item-name ${i.is_dir ? 'is-dir' : ''}" onclick="${clickAction}">
+                        <span style="font-size:1.2em;flex-shrink:0">${icon}</span>
+                        <span>${i.name}</span>
+                    </div>
+                </td>
+                <td class="col-size col-hide-mobile" style="color:var(--text-muted)">${i.is_dir ? '' : fmtSize(i.size)}</td>
+                <td class="col-status" align="center">${badge}</td>
+            `;
+          tb.appendChild(tr);
+        });
+      } catch (e) {
+        alert(t('MSG_LOAD_FAIL'));
+      }
+    }
+    function srcPrev() { if (srcState.page > 1) goSrc(srcState.page - 1); }
+    function srcNext() { const tp = Math.ceil(srcState.total / srcState.pageSize); if (srcState.page < tp) goSrc(srcState.page + 1); }
+    function toggleAllSrc(checked) { document.querySelectorAll('#srcBody input[type=checkbox]').forEach(c => c.checked = checked); }
+
+    // --- Target Logic ---
+    async function goDst() {
+      const path = $('dstPath').value.trim();
+      const url = `/api/list?path=${encodeURIComponent(path)}&only=dirs&sort=name&order=asc&page=1&page_size=1000`;
+      try {
+        const j = await fetch(url).then(r => r.json());
+        $('dstPath').value = j.path || path;
+        renderCrumbs('dstCrumbs', j.path, p => { $('dstPath').value = p; goDst(); });
+        const tb = $('dstBody'); tb.innerHTML = "";
+
+        if ((j.items || []).length === 0) {
+          tb.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-muted)">空目录</td></tr>';
+          return;
+        }
+
+        (j.items || []).filter(x => x.is_dir).forEach(i => {
+          const tr = document.createElement('tr');
+          const safePath = i.path.replace(/'/g, "\\'");
+          tr.innerHTML = `
+                <td>
+                    <div class="item-name is-dir" onclick="$('dstPath').value='${safePath}';goDst();">
+                        <span style="font-size:1.2em">📁</span> <span>${i.name}</span>
+                    </div>
+                </td>
+                <td class="col-size col-hide-mobile" style="color:var(--text-muted)">${fmtTime(i.mtime)}</td>
+            `;
+          tb.appendChild(tr);
+        });
+      } catch (e) { alert(t('MSG_DST_LOAD_FAIL')); }
+    }
+
+    async function init() {
+      initTheme();
+      checkMobileLayout();
+      window.addEventListener('resize', checkMobileLayout);
+      try {
+        const p = await fetch("/api/presets").then(r => r.json());
+        presets = p.pairs || [];
+        const sel = $('presetSel');
+        presets.forEach((x, i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = x.name; sel.appendChild(opt); });
+        await applyPreset();
+      } catch (e) { console.log("Init error", e); }
+      setInterval(refreshJobs, 3000);
+    }
+    async function applyPreset() {
+      const idx = $('presetSel').value || 0; const p = presets[idx]; if (!p) return;
+      currentPresetKey = (p.dst_root ? String(p.dst_root) : "default").replace(/[^a-zA-Z0-9_\-\/]/g, "_");
+      $('srcPath').value = p.src_root; $('dstPath').value = p.dst_root;
+      goSrc(1); goDst(); loadShortcutConfig();
+    }
+    async function loadShortcutConfig() {
+      try {
+        const r = await fetch(`/api/ui/shortcuts?preset_key=${encodeURIComponent(currentPresetKey)}`).then(x => x.json());
+        if (r.ok && r.found) { $('shortcutBase').value = r.base_path || ""; targetShortcuts = r.shortcuts || []; }
+        else { $('shortcutBase').value = normalizePath($('dstPath').value); targetShortcuts = []; }
+        renderShortcuts();
+      } catch (e) { }
+    }
+    function renderShortcuts() {
+      const box = $('shortcutBox'); box.innerHTML = "";
+      targetShortcuts.forEach((sc, idx) => {
+        const tag = document.createElement('div'); tag.className = 'shortcut-tag';
+        tag.innerHTML = `<span onclick="jumpShortcut(${idx})">${sc.label}</span> <span style="opacity:0.5;margin-left:4px" onclick="removeShortcut(${idx})">✕</span>`;
+        box.appendChild(tag);
+      });
+    }
+    async function ensureDir(p) { await fetch("/api/mkdir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: normalizePath(p) }) }); }
+    async function jumpShortcut(idx) {
+      const sc = targetShortcuts[idx]; const base = normalizePath($('shortcutBase').value); const raw = (sc.path || "").trim();
+      const abs = raw.startsWith("/") ? raw : (base + "/" + raw);
+      await ensureDir(abs); $('dstPath').value = normalizePath(abs); goDst();
+    }
+    function addShortcut() {
+      const label = $('shortcutLabel').value.trim(), path = $('shortcutPath').value.trim();
+      if (!label) return; targetShortcuts.push({ label, path }); renderShortcuts(); saveShortcutConfig();
+      $('shortcutLabel').value = ""; $('shortcutPath').value = "";
+    }
+    function removeShortcut(idx) { targetShortcuts.splice(idx, 1); renderShortcuts(); saveShortcutConfig(); }
+    async function saveShortcutConfig() {
+      const base = normalizePath($('shortcutBase').value); if (!base) return;
+      await fetch("/api/ui/shortcuts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preset_key: currentPresetKey, base_path: base, shortcuts: targetShortcuts }) });
+    }
+    function syncBaseToDst() { $('shortcutBase').value = normalizePath($('dstPath').value); saveShortcutConfig(); alert(t('MSG_SET_SHORTCUT_ROOT')); }
+
+    async function doPrecheck() {
+      const src = [...document.querySelectorAll('#srcBody input:checked')].map(x => x.dataset.path);
+      if (!src.length) return alert(t('MSG_PRECHECK_NO_SEL'));
+      const r = await fetch("/api/precheck", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ src_items: src, dst_root: $('dstPath').value }) }).then(x => x.json());
+      if (!r.ok) return alert("Error: " + r.error);
+      if (r.conflicts.length === 0) return alert(t('MSG_PRECHECK_PASS'));
+      alert(t('MSG_PRECHECK_CONFLICT') + r.conflicts.map(c => `[${c.type}] ${c.reason}\n 源: ${c.src}`).join("\n"));
+    }
+    async function doLink() {
+      const src = [...document.querySelectorAll('#srcBody input:checked')].map(x => x.dataset.path);
+      if (!src.length) return alert(t('MSG_PRECHECK_NO_SEL'));
+      if (!confirm(t('MSG_LINK_CONFIRM').replace('{n}', src.length))) return;
+      const r = await fetch("/api/link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ src_items: src, dst_root: $('dstPath').value, note: $('note').value, conflict_policy: $('conflictPolicy').value }) }).then(x => x.json());
+      if (r.ok) { pendingJobIds.add(String(r.job_id)); alert(t('MSG_LINK_STARTED')); toggleAllSrc(false); } else { alert(t('MSG_LINK_FAIL') + r.error); }
+    }
+    async function refreshJobs() {
+      try {
+        const j = await fetch("/api/jobs?limit=20").then(r => r.json());
+        let needsRefresh = false;
+        (j.jobs || []).forEach(x => { if (pendingJobIds.has(String(x.id)) && (x.status === 'DONE' || x.status === 'FAILED')) { pendingJobIds.delete(String(x.id)); needsRefresh = true; } });
+        if (needsRefresh) goSrc(srcState.page);
+      } catch (e) { }
+    }
+
+    function showLogs() { $('logsModal').classList.add('active'); loadRecords(0); }
+    function closeLogs() { $('logsModal').classList.remove('active'); }
+    async function loadRecords(offset) {
+      if (typeof offset === "number") recState.offset = Math.max(0, offset);
+      const inc = $('recIncludeDeleted').checked ? "1" : "0";
+      const url = `/api/records?limit=${recState.limit}&offset=${recState.offset}&status=${$('recStatus').value}&include_deleted=${inc}`;
+      const j = await fetch(url).then(r => r.json());
+      recState.total = j.total; $('recPageInfo').textContent = `${recState.offset + 1}-${Math.min(recState.offset + recState.limit, recState.total)} / ${j.total}`;
+      const tb = $('recBody'); tb.innerHTML = "";
+      (j.rows || []).forEach(r => {
+        const tr = document.createElement('tr');
+
+        let color = 'var(--text-muted)';
+        let statusText = r.status;
+
+        if (r.status === 'OK') {
+          color = 'var(--success)';
+        } else if (r.status === 'FAIL') {
+          color = 'var(--danger)';
+        } else if (r.status === 'UNLINKED') {
+          color = 'var(--text-muted)'; // or orange/red? User wants to know it's deleted.
+          statusText = t('STATUS_UNLINKED'); // Display friendly text for UNLINKED
+        }
+
+        const info = r.status === 'FAIL'
+          ? `源: ${r.src}<br><strong style="color:var(--danger)">${r.message}</strong>`
+          : (r.src + (r.note ? `<br><span style="color:var(--text-muted)">注: ${r.note}</span>` : ''));
+
+        // Add strike-through effect for deleted items?
+        const rowStyle = r.status === 'UNLINKED' ? 'opacity:0.75' : '';
+        const dstDisplay = r.status === 'UNLINKED' ? `<span style="text-decoration:line-through; color:var(--text-muted)">${r.dst}</span>` : r.dst;
+
+        tr.innerHTML = `
+            <td class="col-check"><input type="checkbox" data-src="${r.src}" data-dst="${r.dst}" data-type="${r.item_type}"></td>
+            <td class="col-hide-mobile"><strong>${r.op}</strong></td>
+            <td style="font-size:13px;word-break:break-all;line-height:1.4;${rowStyle}">${info}</td>
+            <td class="col-hide-mobile" style="font-size:13px;word-break:break-all">${dstDisplay}</td>
+            <td class="col-status" style="color:${color};font-weight:700">
+                ${r.status === 'UNLINKED' ? '<span style="border:1px solid currentColor;padding:1px 4px;border-radius:4px;font-size:11px">' + t('BADGE_DELETED') + '</span>' : r.status}
+            </td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+    function recPrev() { if (recState.offset > 0) loadRecords(recState.offset - recState.limit); }
+    function recNext() { if (recState.offset + recState.limit < recState.total) loadRecords(recState.offset + recState.limit); }
+    function toggleAllRec(checked) { document.querySelectorAll('#recBody input[type=checkbox]').forEach(c => c.checked = checked); }
+
+    async function doDelete() {
+      const confirm = $('delConfirm').checked;
+      if (!confirm) return alert(t('MSG_DELETE_NO_CONFIRM'));
+      const items = [...document.querySelectorAll('#recBody input:checked')].map(x => ({ src: x.dataset.src, dst: x.dataset.dst, type: x.dataset.type || "FILE" }));
+      if (!items.length) return alert(t('MSG_DELETE_NO_SEL'));
+
+      const r = await fetch("/api/delete", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: $('delMode').value, items: items, confirm: true })
+      }).then(x => x.json());
+
+      if (r.ok) {
+        alert(t('MSG_DELETE_SUCCESS'));
+        $('delConfirm').checked = false;
+        loadRecords(recState.offset);
+        goDst(); goSrc(srcState.page);
+      } else {
+        alert(t('MSG_DELETE_FAIL') + r.error);
+      }
+    }
+
+    init();
+
+
+    // =========================================
+    // Manage Modal Logic (Optimized)
+    // =========================================
+    let mgState = {
+      groups: [],
+      filtered: [],
+      shown: null,
+      page: 1,
+      pageSize: 100,
+      selected: [],
+      viewMode: 'folder',
+      expandedFolders: new Set()
+    };
+
+    function showManage() {
+      $('manageModal').classList.add('active');
+      mgState.page = 1;
+      loadManage();
+    }
+    function closeManage() {
+      $('manageModal').classList.remove('active');
+      hideManageDetail();
+    }
+    function hideManageDetail() {
+      $('mgDetailPane').classList.remove('active');
+    }
+
+    function mgToggleAll(checked) {
+      const checkboxes = document.querySelectorAll('#mgBody input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = checked);
+      mgState.selected = checked ? Array.from(checkboxes).map((cb, i) => i) : [];
+    }
+
+    function mgToggleRow(idx, checked) {
+      if (checked) {
+        if (!mgState.selected.includes(idx)) mgState.selected.push(idx);
+      } else {
+        mgState.selected = mgState.selected.filter(i => i !== idx);
+      }
+      renderManage();
+    }
+
+    async function loadManage(forceRescan) {
+      $('mgInfo').textContent = t('MSG_SCANNING');
+      const url = `/api/hardlinks/groups?offset=0&limit_groups=999999&max_paths=200${forceRescan ? '&force=1' : ''}`;
+      const j = await fetch(url).then(r => r.json());
+      if (!j.ok) { alert(j.error || "Login fail"); return; }
+
+      mgState.groups = j.groups || [];
+      mgState.total = j.total_groups || (j.groups ? j.groups.length : 0);
+      mgState.scanned = j.scanned_files || 0;
+
+      $('mgInfo').textContent = t('MSG_FOUND_GROUPS').replace('{groups}', mgState.total).replace('{scanned}', mgState.scanned);
+      renderManage();
+    }
+
+    // --- 核心渲染函数 (支持多级目录) ---
+    // --- 核心渲染函数 (支持多级目录 & 文件夹多选) ---
+    function renderManage() {
+      const kw = ($('mgSearch').value || "").trim().toLowerCase();
+
+      mgState.filtered = (mgState.groups || []).filter(g => {
+        if (!kw) return true;
+        const src = (g.src || "").toLowerCase();
+        if (src.includes(kw)) return true;
+        return (g.targets || []).some(p => (p || "").toLowerCase().includes(kw));
+      });
+
+      const tb = $('mgBody');
+      tb.innerHTML = "";
+
+      if (mgState.filtered.length === 0) {
+        tb.innerHTML = `<tr><td colspan="4" style="padding:40px; text-align:center; color:var(--text-muted)">
+            <div style="font-size:24px; margin-bottom:10px; opacity:0.3">🔍</div>
+            <div>${t('MSG_NO_MATCH')}</div>
+        </td></tr>`;
+        return;
+      }
+
+      if (mgState.viewMode === 'folder') {
+        const folderMap = new Map();
+        mgState.filtered.forEach((g, idx) => {
+          const src = g.src || "";
+          const parts = src.split('/').filter(p => p);
+          // 根目录起第6层作为归组依据 (如果不够6层则取上一层)
+          let folderParts = (parts.length <= 6) ? parts.slice(0, -1) : parts.slice(0, 6);
+          const folder = '/' + folderParts.join('/');
+
+          if (!folderMap.has(folder)) folderMap.set(folder, []);
+          folderMap.get(folder).push({ group: g, index: idx });
+        });
+
+        const sortedFolders = Array.from(folderMap.keys()).sort();
+
+        sortedFolders.forEach(folder => {
+          const items = folderMap.get(folder);
+          const isExpanded = mgState.expandedFolders.has(folder);
+
+          // 1. 构建树以计算选中状态
+          const tree = buildTree(folder, items);
+
+          // 2. 渲染顶级（Base）文件夹行
+          renderFolderRow(tb, folder, items, 0, isExpanded, true);
+
+          // 3. 如果展开，渲染子树
+          if (isExpanded) {
+            renderTreeNodes(tb, tree, 1);
+          }
+        });
+
+        if ($('mgPageInfo')) $('mgPageInfo').textContent = `显示 ${sortedFolders.length} 个顶级目录`;
+      }
+    }
+
+    // 辅助：构建树结构
+    function buildTree(basePath, items) {
+      const root = { dirs: {}, files: [], allIndices: [] };
+      items.forEach(item => {
+        root.allIndices.push(item.index);
+        const fullPath = item.group.src;
+        if (!fullPath.startsWith(basePath + '/')) {
+          root.files.push(item);
+          return;
+        }
+        const rel = fullPath.substring(basePath.length + 1);
+        const parts = rel.split('/');
+        const fileName = parts.pop();
+
+        let current = root;
+        let curPath = basePath;
+
+        parts.forEach(part => {
+          curPath += '/' + part;
+          if (!current.dirs[part]) {
+            current.dirs[part] = {
+              name: part,
+              fullPath: curPath,
+              dirs: {},
+              files: [],
+              allIndices: []
+            };
+          }
+          current = current.dirs[part];
+          current.allIndices.push(item.index);
+        });
+        current.files.push(item);
+      });
+      return root;
+    }
+
+    // 辅助：递归渲染树节点
+    function renderTreeNodes(container, node, level) {
+      // 1. 先渲染子文件夹
+      const sortedDirs = Object.keys(node.dirs).sort();
+      sortedDirs.forEach(dirName => {
+        const subNode = node.dirs[dirName];
+        const isExpanded = mgState.expandedFolders.has(subNode.fullPath);
+
+        renderFolderRow(container, subNode.fullPath, { allIndices: subNode.allIndices }, level, isExpanded, false, subNode.name);
+
+        if (isExpanded) {
+          renderTreeNodes(container, subNode, level + 1);
+        }
+      });
+
+      // 2. 渲染当前层级的文件
+      node.files.sort((a, b) => (a.group.src || "").localeCompare(b.group.src || ""));
+      node.files.forEach(f => {
+        renderFileRow(container, f, level);
+      });
+    }
+
+    // 渲染文件夹行
+    // itemsOrNode: 必须包含 allIndices 数组，或者本身就是 item 数组 (此时 map 出 index)
+    function renderFolderRow(container, fullPath, itemsOrNode, level, isExpanded, isBase, displayName) {
+      const tr = document.createElement('tr');
+      tr.className = `mg-folder-row ${isExpanded ? 'expanded' : ''}`;
+
+      let indices = [];
+      if (Array.isArray(itemsOrNode)) {
+        indices = itemsOrNode.map(x => x.index);
+      } else if (itemsOrNode && itemsOrNode.allIndices) {
+        indices = itemsOrNode.allIndices;
+      }
+
+      // 计算选中状态
+      const total = indices.length;
+      const selectedCount = indices.filter(i => mgState.selected.includes(i)).length;
+      const isAll = total > 0 && selectedCount === total;
+      const isSome = selectedCount > 0 && selectedCount < total;
+
+      // 点击行：展开/收起 (除非点的是 checkbox)
+      tr.onclick = (e) => {
+        if (e.target.tagName !== 'INPUT') mgToggleFolder(fullPath);
+      };
+
+      const indent = level * 24;
+      const name = displayName || fullPath;
+      const countStr = total !== null ? `${total} 个文件` : '';
+      const iconStyle = `margin-left:${indent}px;`;
+
+      tr.innerHTML = `
+            <td class="col-check">
+                <input type="checkbox" 
+                    ${isAll ? 'checked' : ''} 
+                    onchange="mgToggleFolderSelection('${escapeJs(fullPath)}', this.checked, [${indices.join(',')}])"
+                >
+            </td>
+            <td colspan="3">
+              <div style="display:flex; align-items:center;">
+                <span class="mg-folder-icon" style="${iconStyle}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+                <span style="color:${isBase ? 'var(--primary)' : 'var(--text-muted)'}; margin-right:8px;">📁</span>
+                <span style="font-family:inherit;${isBase ? '' : 'font-weight:normal'}">${name}</span>
+                <span style="margin-left:auto; margin-right:10px; color:var(--text-muted); font-size:12px; font-weight:400;">
+                  ${countStr} <span style="font-size:10px;opacity:0.7">(${selectedCount}/${total})</span>
+                </span>
+              </div>
+            </td>
+        `;
+
+      // 设置 indeterminate 状态
+      const checkbox = tr.querySelector('input[type="checkbox"]');
+      if (checkbox && isSome && !isAll) {
+        checkbox.indeterminate = true;
+      }
+
+      container.appendChild(tr);
+    }
+
+    // 渲染文件行
+    function renderFileRow(container, item, level) {
+      const { group: g, index: idx } = item;
+      const tr = document.createElement('tr');
+      tr.className = 'mg-file-row';
+      const fileName = (g.src || "").substring((g.src || "").lastIndexOf('/') + 1);
+      const safeTitle = (g.src || "").replace(/"/g, '&quot;');
+      const isSelected = mgState.selected.includes(idx);
+
+      const indent = (level) * 24 + 16;
+
+      tr.innerHTML = `
+        <td class="col-check">
+            <input type="checkbox" data-index="${idx}" ${isSelected ? 'checked' : ''} onchange="mgToggleRow(${idx}, this.checked)">
+        </td>
+        <td>
+          <div style="padding-left:${indent}px; display:flex; align-items:center; overflow:hidden">
+                <span style="font-size:1.1em; margin-right:8px; opacity:0.7">📄</span>
+                <div class="mg-path-cell" title="${safeTitle}" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${fileName}
+                </div>
+          </div>
+        </td>
+        <td style="text-align:center;">
+          <span class="count-badge" title="硬链接副本数">${(g.targets || []).length}</span>
+        </td>
+        <td style="text-align:right; padding-right:16px;">
+          <button class="ghost btn-sm" onclick="showManageDetail(${idx})">查看详情</button>
+        </td>
+       `;
+      container.appendChild(tr);
+    }
+
+    function mgToggleFolder(folder) {
+      if (mgState.expandedFolders.has(folder)) {
+        mgState.expandedFolders.delete(folder);
+      } else {
+        mgState.expandedFolders.add(folder);
+      }
+      renderManage();
+    }
+
+    function mgToggleFolderSelection(path, checked, indices) {
+      // 批量更新 indices 的选中状态
+      if (checked) {
+        // 添加所有不在 selected 中的 index
+        indices.forEach(i => {
+          if (!mgState.selected.includes(i)) mgState.selected.push(i);
+        });
+      } else {
+        // 移除所有在 indices 中的 index
+        mgState.selected = mgState.selected.filter(i => !indices.includes(i));
+      }
+      renderManage();
+    }
+
+    function showManageDetail(index) {
+      const g = (mgState.filtered || [])[index];
+      if (!g) return;
+
+      $('mgDetailPane').classList.add('active');
+
+      $('mgDetailSrc').textContent = g.src || "";
+      $('mgDetailInode').textContent = `${g.dev}:${g.ino} (共 ${(g.targets || []).length + 1} 个副本)`;
+
+      const wrap = $('mgDetailList');
+      wrap.innerHTML = "";
+
+      (g.targets || []).forEach(p => {
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); margin-bottom:8px;";
+        row.innerHTML = `
+            <div class="p" style="word-break:break-all; font-size:13px; color:var(--text-main); font-family:inherit" title="${escapeHtml(p)}">${escapeHtml(p)}</div>
+            <div style="flex-shrink:0">
+                <button class="ghost danger" style="padding:4px 10px; font-size:12px;" onclick="mgUnlink('${escapeJs(p)}')">删除</button>
+            </div>
+        `;
+        wrap.appendChild(row);
+      });
+
+      if (!(g.targets || []).length) {
+        wrap.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:13px;">该文件没有其他硬链接副本（或未在扫描路径中）。</div>`;
+      }
+    }
+
+    function escapeJs(s) {
+      return String(s)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "");
+    }
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function mgUnlink(path) {
+      if (!confirm(t('MSG_UNLINK_CONFIRM').replace('{path}', path))) return;
+      const r = await fetch("/api/hardlinks/unlink", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+      }).then(x => x.json());
+
+      if (!r.ok) return alert(r.error || "删除失败");
+      await loadManage();
+    }
+
+    // NEW: Batch Delete
+    async function mgDeleteSelected() {
+      if (!mgState.selected.length) return alert(t("MSG_DELETE_NO_SEL"));
+
+      const count = mgState.selected.length;
+      if (!confirm(t('MSG_DELETE_CONFIRM_BATCH').replace('{n}', count))) return;
+
+      // Collect paths from valid indices
+      const paths = [];
+      mgState.selected.forEach(idx => {
+        const g = mgState.groups[idx];
+        if (g && g.src) paths.push(g.src);
+      });
+
+      if (!paths.length) return alert("No valid paths");
+
+      $('mgInfo').textContent = t('MSG_DELETE_BATCH_START');
+      try {
+        const r = await fetch("/api/hardlinks/unlink", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paths })
+        }).then(x => x.json());
+
+        if (r.ok) {
+          const errCount = (r.errors || []).length;
+          if (errCount > 0) {
+            alert(t('MSG_DELETE_BATCH_PARTIAL').replace('{k}', r.deleted).replace('{f}', errCount).replace('{err}', r.errors[0]));
+          } else {
+            alert(t('MSG_DELETE_BATCH_DONE').replace('{n}', r.deleted));
+          }
+          mgState.selected = []; // Clear selection
+          await loadManage();
+        } else {
+          alert(t('MSG_DELETE_BATCH_FAIL') + r.error);
+          $('mgInfo').textContent = t('MSG_DELETE_BATCH_FAIL') + r.error;
+        }
+      } catch (e) {
+        alert(t('MSG_DELETE_REQ_ERR') + e);
+      }
+    }
+
+    // Mobile Layout Switcher
+    function checkMobileLayout() {
+      const isMobile = window.innerWidth <= 650;
+      const headerTools = $('headerTools');
+      const mobileToolbar = $('mobileToolbar');
+      const sel = $('presetSel');
+      // Buttons: select all buttons in headerTools or mobileToolbar
+      // We need to move them carefully.
+
+      if (isMobile) {
+        if (!$('mobileRow')) {
+          // Create structure in mobileToolbar
+          mobileToolbar.innerHTML = '';
+          mobileToolbar.appendChild(sel); // Move select
+
+          const row = document.createElement('div');
+          row.id = 'mobileRow';
+          row.className = 'tools-row';
+
+          // Move buttons
+          const btns = Array.from(headerTools.querySelectorAll('button'));
+          btns.forEach(b => row.appendChild(b));
+
+          mobileToolbar.appendChild(row);
+          mobileToolbar.classList.add('active');
+        }
+      } else {
+        if ($('mobileRow')) {
+          // Move back to headerTools
+          headerTools.appendChild(sel); // Move select first
+
+          const row = $('mobileRow');
+          const btns = Array.from(row.querySelectorAll('button'));
+          btns.forEach(b => headerTools.appendChild(b));
+
+          mobileToolbar.innerHTML = '';
+          mobileToolbar.classList.remove('active');
+        }
+        // Ensure select is first
+        headerTools.prepend(sel);
+      }
+    }
+  </script>
+
+  <div id="manageModal">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div class="modal-title">
+          <div class="modal-title-icon">🧰</div>
+          <div>{{ t('MANAGE_TITLE') }}</div>
+          <span
+            style="font-size:12px; font-weight:500; color:var(--text-muted); margin-left:8px; background:var(--bg-body); padding:2px 8px; border-radius:100px;">{{
+            t('BADGE_SOURCE_TYPE') }}</span>
+        </div>
+        <button class="ghost" style="border:none; padding:8px;" onclick="closeManage()">✕</button>
+      </div>
+
+      <div class="modal-toolbar">
+        <div class="search-wrapper">
+          <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input id="mgSearch" class="input-search" type="text" placeholder="{{ t('PLACEHOLDER_SEARCH_MANAGE') }}"
+            oninput="renderManage()">
+        </div>
+        <button class="ghost" onclick="loadManage()">
+          <svg width="14" height="14" fill="none" style="margin-right:4px" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {{ t('BTN_RESCAN') }}
+        </button>
+        <button class="danger" onclick="mgDeleteSelected()">🗑️ {{ t('BTN_DELETE_SELECTED') }}</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="list-pane">
+          <table>
+            <thead>
+              <tr>
+                <th width="48" style="text-align:center"></th>
+                <th>{{ t('TH_SOURCE_GROUP') }}</th>
+                <th width="80" style="text-align:center">{{ t('TH_LINKS_COUNT') }}</th>
+                <th width="100" style="text-align:right">{{ t('TH_ACTIONS') }}</th>
+              </tr>
+            </thead>
+            <tbody id="mgBody"></tbody>
+          </table>
+        </div>
+
+        <div id="mgDetailPane" class="detail-pane">
+          <div class="detail-header">
+            <div style="font-weight:700; display:flex; gap:8px; align-items:center;">
+              <span>📂 组详情</span>
+              <span id="mgDetailInode"
+                style="font-weight:400; font-family:monospace; font-size:12px; color:var(--text-muted); background:var(--bg-body); padding:2px 6px; border-radius:4px;"></span>
+            </div>
+            <button class="ghost" onclick="hideManageDetail()">收起 ⌄</button>
+          </div>
+
+          <div class="detail-content">
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">源路径</div>
+              <div id="mgDetailSrc" style="font-family:inherit; word-break:break-all; font-weight:600; font-size:13px;">
+              </div>
+            </div>
+
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; font-weight:700;">目标路径（硬链接副本）</div>
+            <div id="mgDetailList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane-footer modal-footer">
+        <span id="mgInfo" style="color:var(--text-muted)"></span>
+        <div class="pagination">
+          <button class="ghost" onclick="loadManage(true)" style="padding:6px 14px; font-size:13px;">重新扫描</button>
+          <span id="mgPageInfo" style="margin-left:8px; color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+
+</html>

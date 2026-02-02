@@ -1,0 +1,24 @@
+services:
+  hardlink-ui:
+    build: .
+    container_name: hardlink-ui-v2
+      # 允许操作的根目录（按你 NAS 实际路径修改；也决定“管理”扫描范围）
+      # - ALLOWED_ROOTS=/vol2/1000,/vol3/1000,/vol5/1000
+    ports:
+      - "18121:18120"
+    volumes:
+      - ./data:/data
+      - ./templates:/app/templates
+      - ./app.py:/app/app.py
+      - ./i18n.py:/app/i18n.py
+      - ./static:/app/static
+      # [REQUIRED] Map your media directories here.
+      # You must update ALLOWED_ROOTS in .env or app.py to match these paths.
+      # - /path/to/media:/media
+      # - /mnt/user/downloads:/downloads
+      
+      # Example (User specific):
+      # - /vol2/1000:/vol2/1000
+      # - /vol3/1000:/vol3/1000
+      # - /vol5/1000:/vol5/1000
+    restart: unless-stopped

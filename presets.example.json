@@ -1,0 +1,20 @@
+{
+    "pairs": [
+        {
+            "name": "Example Task (Movies)",
+            "src_root": "/mnt/media/downloads/movies",
+            "dst_root": "/mnt/media/library/movies"
+        },
+        {
+            "name": "Example Task (TV)",
+            "src_root": "/mnt/media/downloads/tv",
+            "dst_root": "/mnt/media/library/tv"
+        }
+    ],
+    "target_shortcuts": [
+        "Movies",
+        "TV Shows",
+        "Anime",
+        "Unsorted"
+    ]
+}
